@@ -30,9 +30,13 @@ def get_mail_by_upn(upn: str, token: str):
     # Query Microsoft Graph API and return the user object for the given UPN
     url = f"https://graph.microsoft.com/v1.0/users/{upn}"
     headers = {
-        "Authorization":  f"Bearer {token}"
+        "Authorization": f"Bearer {token}"
     }
     response = requests.get(url, headers=headers)
+
+    if response.status_code == 404:
+        return None
+
     response.raise_for_status()
     return response.json()
 
@@ -47,6 +51,10 @@ def get_mail():
     try:
         token = get_access_token()
         user  = get_mail_by_upn(upn, token)
+
+        if user is None:
+            return jsonify({"error": f"No user found with UPN: {upn}"}), 404
+
         return jsonify({
             "userPrincipalName": user.get("userPrincipalName"),
             "email":             user.get("mail"),
@@ -57,6 +65,6 @@ def get_mail():
         return jsonify({"error": str(e)}), e.response.status_code
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-
+    
 if __name__ == "__main__":
     app.run(debug=True)
